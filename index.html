@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Daily Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --paper:#F4F6EF;
+    --card:#FFFFFF;
+    --ink:#1E2A22;
+    --ink-soft:#5B6A5F;
+    --line:#DBE1D3;
+    --sage:#6B8F71;
+    --sage-bg:#E7F0E5;
+    --marigold:#E3A23C;
+    --marigold-bg:#FBF0DC;
+    --sky:#4C7A93;
+    --sky-bg:#E4EEF2;
+    --coral:#D9634F;
+    --coral-bg:#FBE6E1;
+    --radius:14px;
+    --shadow: 0 1px 2px rgba(30,42,34,0.06), 0 4px 14px rgba(30,42,34,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Work Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:22px 18px 40px;}
+
+  /* Header */
+  header{margin-bottom:20px;}
+  .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-optical-sizing:auto;
+    font-size:34px;
+    letter-spacing:-0.01em;
+    margin:0 0 2px;
+    color:var(--ink);
+  }
+  .date-line{
+    font-size:14px;
+    color:var(--ink-soft);
+    font-family:'JetBrains Mono', monospace;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px;
+  }
+  .sync-dot{
+    display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:var(--sage);margin-left:2px;
+    box-shadow:0 0 0 3px transparent;
+    transition:background 0.3s;
+    cursor:default;
+  }
+  .role-pill{
+    display:flex;align-items:center;gap:8px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:6px 6px 6px 14px;
+    font-size:13px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+    user-select:none;
+  }
+  .role-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--marigold);flex:none;}
+  .role-pill select{
+    border:none;background:var(--sage-bg);color:var(--ink);
+    font-family:'Work Sans',sans-serif;font-weight:600;font-size:14px;
+    padding:8px 12px;border-radius:999px;cursor:pointer;
+    -webkit-appearance:none;appearance:none;
+    min-height:36px;
+  }
+  .header-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .lang-toggle{
+    display:flex;background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:3px;box-shadow:var(--shadow);
+  }
+  .lang-btn{
+    border:none;background:none;padding:8px 13px;border-radius:999px;
+    font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;
+    color:var(--ink-soft);cursor:pointer;min-height:34px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .lang-btn.active{background:var(--sky);color:#fff;}
+
+  /* Auth */
+  .user-pill{
+    display:flex;align-items:center;gap:8px;
+    background:var(--card);border:1px solid var(--line);border-radius:999px;
+    padding:5px 12px 5px 5px;box-shadow:var(--shadow);cursor:pointer;user-select:none;
+  }
+  .user-pill img{width:26px;height:26px;border-radius:50%;}
+  .user-pill .name{font-size:13px;font-weight:600;}
+  .gate{
+    position:fixed;inset:0;background:var(--paper);z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .gate-card{
+    background:var(--card);border-radius:18px;padding:32px 26px;max-width:360px;width:100%;
+    box-shadow:0 10px 40px rgba(0,0,0,0.15);text-align:center;
+  }
+  .gate-card h2{font-family:'Fraunces',serif;font-size:23px;margin:0 0 8px;}
+  .gate-card p{font-size:13.5px;color:var(--ink-soft);margin:0 0 22px;line-height:1.5;}
+  .google-btn{
+    display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:13px;
+    font-size:14.5px;font-weight:600;color:var(--ink);cursor:pointer;min-height:48px;
+  }
+  .google-btn:hover{background:var(--paper);}
+  .gate-error{
+    margin-top:16px;background:var(--coral-bg);color:#8B3A2E;border-radius:10px;
+    padding:10px 12px;font-size:13px;line-height:1.5;display:none;
+  }
+  .gate-error.show{display:block;}
+  .gate-settings{
+    margin-top:18px;font-size:12px;color:var(--ink-soft);text-decoration:underline;
+    cursor:pointer;background:none;border:none;
+  }
+  .config-box{margin-top:14px;display:none;text-align:left;}
+  .config-box.open{display:block;}
+  .config-box textarea{
+    width:100%;min-height:100px;border:1px solid var(--line);border-radius:8px;
+    padding:10px;font-family:'JetBrains Mono',monospace;font-size:11.5px;
+    background:var(--paper);color:var(--ink);
+  }
+  .config-box .small-btn{margin-top:8px;width:100%;}
+
+  /* Day strip */
+  .day-strip{
+    display:flex;gap:6px;margin-top:16px;
+  }
+  .day-seg{
+    flex:1;height:5px;border-radius:3px;background:var(--line);position:relative;overflow:hidden;
+  }
+  .day-seg.active::after{
+    content:'';position:absolute;inset:0;background:var(--marigold);
+  }
+  .day-labels{display:flex;gap:6px;margin-top:5px;}
+  .day-labels span{flex:1;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);}
+
+  /* Section */
+  section.group{margin-top:26px;}
+  .group-head{
+    display:flex;align-items:center;gap:8px;margin-bottom:10px;
+  }
+  .group-head .swatch{width:10px;height:10px;border-radius:3px;}
+  .group-head h2{
+    font-family:'Fraunces', serif;font-weight:600;font-size:17px;margin:0;
+  }
+  .group-head .count{
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-soft);
+    background:var(--card);border:1px solid var(--line);border-radius:999px;padding:1px 8px;
+  }
+  .empty-note{
+    font-size:13px;color:var(--ink-soft);padding:10px 2px;font-style:italic;
+  }
+
+  /* Card */
+  .task{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    border:1px solid var(--line);
+    padding:14px 14px 14px 12px;
+    margin-bottom:10px;
+    position:relative;
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+  }
+  .task::before{
+    content:'';
+    position:absolute;
+    top:-1px;left:16px;right:16px;height:8px;
+    background:
+      radial-gradient(circle at 6px 0, transparent 5px, var(--paper) 5.5px) repeat-x;
+    background-size:14px 8px;
+    opacity:0.9;
+  }
+  .task.done{opacity:0.6;}
+  .task.overdue{border-color:#EEC3BA;}
+
+  .check{
+    flex:none;width:30px;height:30px;border-radius:9px;
+    border:2px solid var(--line);
+    background:var(--paper);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;margin-top:2px;
+    transition:background 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .check svg{width:17px;height:17px;stroke:var(--card);stroke-width:3;fill:none;
+    stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:20;stroke-dashoffset:20;transition:stroke-dashoffset 0.25s ease;}
+  .task.done .check{background:var(--sage);border-color:var(--sage);}
+  .task.done .check svg{stroke-dashoffset:0;}
+
+  .task-body{flex:1;min-width:0;}
+  .task-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
+  .task-name{font-weight:600;font-size:15.5px;line-height:1.3;}
+  .task.done .task-name{text-decoration:line-through;text-decoration-color:var(--sage);}
+  .badge{
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;
+    padding:3px 8px;border-radius:999px;white-space:nowrap;font-weight:500;
+  }
+  .badge.time{background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);}
+  .badge.standing{background:var(--marigold-bg);color:#96631C;}
+
+  .meta-line{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  .meal-input{
+    margin-top:8px;width:100%;
+    border:1px solid var(--line);background:var(--paper);
+    border-radius:8px;padding:8px 10px;font-family:'Work Sans',sans-serif;
+    font-size:13.5px;color:var(--ink);resize:vertical;min-height:36px;
+  }
+  .task-actions{display:flex;gap:2px;flex:none;margin-top:-4px;margin-right:-6px;}
+  .icon-btn{
+    background:none;border:none;color:var(--ink-soft);cursor:pointer;
+    padding:9px;border-radius:8px;font-size:16px;line-height:1;
+    width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .icon-btn:hover, .icon-btn:active{background:var(--paper);color:var(--ink);}
+
+  .edit-panel{
+    margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+    display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+  }
+  .edit-panel label{font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:4px;}
+  .edit-panel input[type=time], .edit-panel select{
+    border:1px solid var(--line);border-radius:8px;padding:9px 10px;
+    font-family:'Work Sans',sans-serif;font-size:14px;background:var(--paper);color:var(--ink);
+    min-height:38px;
+  }
+  .weekday-picker{display:flex;gap:5px;flex-wrap:wrap;}
+  .weekday-picker button{
+    width:34px;height:34px;border-radius:50%;border:1px solid var(--line);
+    background:var(--paper);font-size:12px;cursor:pointer;color:var(--ink-soft);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .weekday-picker button.on{background:var(--sage);color:#fff;border-color:var(--sage);}
+  .small-btn{
+    background:var(--ink);color:#fff;border:none;border-radius:8px;
+    padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;
+    min-height:38px;
+  }
+  .small-btn.ghost{background:none;border:1px solid var(--line);color:var(--ink-soft);}
+
+  /* Add task */
+  .add-box{
+    margin-top:26px;background:var(--card);border:1px dashed var(--line);
+    border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);
+  }
+  .add-toggle{
+    display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:14.5px;
+    font-family:'Fraunces',serif;
+  }
+  .add-toggle .plus{
+    width:24px;height:24px;border-radius:50%;background:var(--sky);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:16px;
+  }
+  .add-form{display:none;margin-top:14px;flex-wrap:wrap;gap:10px;}
+  .add-form.open{display:flex;}
+  .add-form input[type=text]{
+    flex:1 1 200px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;
+    font-family:'Work Sans',sans-serif;font-size:14px;background:var(--paper);color:var(--ink);
+  }
+  .add-form input[type=time]{
+    border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:14px;background:var(--paper);color:var(--ink);
+  }
+  .add-form label.check-inline{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);}
+
+  /* History */
+  .history{margin-top:34px;}
+  .history h2{
+    font-family:'Fraunces',serif;font-weight:600;font-size:17px;margin:0 0 10px;
+  }
+  .log-row{
+    display:flex;gap:10px;align-items:baseline;font-size:13px;padding:7px 0;
+    border-bottom:1px solid var(--line);color:var(--ink-soft);
+  }
+  .log-row .t{font-family:'JetBrains Mono',monospace;font-size:11px;flex:none;width:58px;}
+  .log-row b{color:var(--ink);font-weight:600;}
+  .log-row .tag{
+    font-size:10px;text-transform:uppercase;letter-spacing:0.04em;
+    background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:1px 6px;flex:none;
+  }
+
+  footer.ics{
+    margin-top:30px;text-align:center;
+  }
+  .ics-btn{
+    background:var(--sky);color:#fff;border:none;border-radius:999px;
+    padding:11px 20px;font-size:13.5px;font-weight:600;cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  .ics-note{font-size:11.5px;color:var(--ink-soft);margin-top:8px;line-height:1.5;}
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(30,42,34,0.45);
+    display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
+  }
+  .modal{
+    background:var(--card);border-radius:18px;padding:26px 24px;max-width:340px;width:100%;
+    box-shadow:0 10px 40px rgba(0,0,0,0.2);text-align:center;
+  }
+  .modal h2{font-family:'Fraunces',serif;font-size:22px;margin:0 0 6px;}
+  .modal p{font-size:13.5px;color:var(--ink-soft);margin:0 0 18px;}
+  .modal button{
+    display:block;width:100%;padding:14px;margin-bottom:10px;border-radius:10px;
+    border:1px solid var(--line);background:var(--paper);font-size:15px;font-weight:600;
+    cursor:pointer;color:var(--ink);min-height:48px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .modal button:hover, .modal button:active{background:var(--sage-bg);border-color:var(--sage);}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;
+    opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:60;
+    max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1;}
+
+  @media (max-width:480px){
+    .wrap{padding:16px 14px 40px;}
+    h1{font-size:26px;}
+    .top-row{gap:10px;}
+    .header-controls{width:100%;justify-content:space-between;}
+    .role-pill select{font-size:13px;}
+    .task{padding:12px 10px;gap:10px;}
+    .task-name{font-size:15px;}
+    .add-form{flex-direction:column;align-items:stretch;}
+    .add-form input[type=text], .add-form input[type=time]{width:100%;}
+    .small-btn{width:100%;}
+    .ics-btn{width:100%;padding:13px 20px;font-size:14px;}
+    .edit-panel{flex-direction:column;align-items:stretch;}
+    .edit-panel > label{width:100%;}
+    .edit-panel input[type=time], .edit-panel select{width:100%;}
+    .day-labels span{font-size:9px;}
+  }
+
+  @media (hover:none){
+    .icon-btn:active{background:var(--paper);}
+  }
+
+  @media (max-width:600px){
+    input[type=text], input[type=time], select, textarea{
+      font-size:16px;
+    }
+  }
+
+  /* Date navigation */
+  .date-nav{display:flex;align-items:center;gap:6px;}
+  .date-nav-btn{
+    width:26px;height:26px;border-radius:50%;border:1px solid var(--line);
+    background:var(--card);color:var(--ink-soft);font-size:14px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;flex:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .date-nav-btn:hover{background:var(--paper);}
+  .today-jump{
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+    background:var(--sky-bg);color:var(--sky);border:none;border-radius:999px;
+    padding:4px 10px;cursor:pointer;
+  }
+
+  /* Add-task form extras */
+  .chip-btn{
+    border:1px solid var(--line);background:var(--paper);border-radius:8px;
+    padding:9px 12px;font-size:13px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;white-space:nowrap;
+  }
+  .chip-btn.active{background:var(--sky);color:#fff;border-color:var(--sky);}
+  .time-row{display:flex;gap:8px;align-items:center;flex:1 1 220px;}
+  .time-row input[type=time]{flex:1;}
+  .field-label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
+  .date-field-wrap, .days-field-wrap{flex:1 1 100%;}
+  .days-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="top-row">
+      <div>
+        <h1 id="mainTitle">The Daily Board</h1>
+        <div class="date-line">
+          <div class="date-nav">
+            <button class="date-nav-btn" id="prevDayBtn">‹</button>
+            <span id="dateLine"></span>
+            <button class="date-nav-btn" id="nextDayBtn">›</button>
+          </div>
+          <button class="today-jump" id="todayJumpBtn" style="display:none;">Today</button>
+          <span class="sync-dot" id="syncDot" title="Synced"></span>
+        </div>
+      </div>
+      <div class="header-controls">
+        <div class="lang-toggle" id="langToggle">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="es">ES</button>
+        </div>
+        <div class="user-pill" id="userPill" title="Click to sign out">
+          <img id="userPhoto" src="" alt="">
+          <span class="name" id="userName">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="day-strip" id="dayStrip"></div>
+    <div class="day-labels" id="dayLabels"></div>
+  </header>
+
+  <div id="groups"></div>
+
+  <div class="add-box">
+    <div class="add-toggle" id="addToggle"><span class="plus">+</span> <span id="addToggleText">Add a task</span></div>
+    <div class="add-form" id="addForm">
+      <input type="text" id="newTaskName" placeholder="What needs doing?">
+      <div class="time-row">
+        <input type="time" id="newTaskTime">
+        <button type="button" class="chip-btn" id="allDayBtn">All day</button>
+      </div>
+      <label class="check-inline"><input type="checkbox" id="newTaskStanding"> <span id="standingLabelText">Make this a standing duty</span></label>
+
+      <div class="date-field-wrap" id="oneOffDateWrap">
+        <label class="field-label" id="oneOffDateLabel">Date</label>
+        <input type="date" id="newTaskDate">
+      </div>
+
+      <div class="days-field-wrap" id="standingDaysWrap" style="display:none;">
+        <label class="field-label" id="standingDaysLabel">Repeats</label>
+        <div class="days-row">
+          <button type="button" class="chip-btn active" id="everyDayBtn">Every day</button>
+          <div class="weekday-picker" id="newTaskDayPicker"></div>
+        </div>
+      </div>
+
+      <button class="small-btn" id="newTaskSave">Add to today</button>
+    </div>
+  </div>
+
+  <div class="history">
+    <h2 id="historyTitle">Recent activity</h2>
+    <div id="logList"></div>
+  </div>
+
+  <footer class="ics">
+    <button class="ics-btn" id="icsBtn">⤓ Download reminders (.ics)</button>
+    <div class="ics-note" id="icsNote">Import once into Susset's iPhone Calendar app for real push alerts at each standing duty's time.<br>Re-download any time after you edit times — it always reflects the current board.</div>
+  </footer>
+
+</div>
+
+<div class="gate" id="authGate">
+  <div class="gate-card">
+    <h2 id="gateTitle">Household Duties</h2>
+    <p id="gateDesc">Sign in with your Google account to view and manage the board.</p>
+    <button class="google-btn" id="googleSignInBtn">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 009 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 013.68 9c0-.59.1-1.17.27-1.7V4.97H.96A9 9 0 000 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 00.96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="gate-error" id="gateError"></div>
+    <button class="gate-settings" id="gateSettingsToggle">Advanced: override Firebase config for this device only</button>
+    <div class="config-box" id="configBox">
+      <label class="field-label" style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;">Paste the whole config snippet Firebase showed you (copy-paste as-is, no editing needed)</label>
+      <textarea id="firebaseConfigInput" placeholder='const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", ... };'></textarea>
+      <button class="small-btn" id="saveConfigBtn">Save &amp; reload</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- Firebase config ----
+// EMBEDDED CONFIG: paste your Firebase web config object here (replace `null` below) and
+// re-upload this file. This makes the connection automatic for EVERYONE who opens the link —
+// unlike the in-app "paste config" box, which only works on the one device that used it.
+// Not secret data — safe to commit to a public repo. See the setup guide, Part 8.
+const EMBEDDED_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCEFWmQH89w1tDvhR9PG1ru6rB1Dx9ANIs",
+  authDomain: "household-duties-a1696.firebaseapp.com",
+  projectId: "household-duties-a1696",
+  storageBucket: "household-duties-a1696.firebasestorage.app",
+  messagingSenderId: "1002155441691",
+  appId: "1:1002155441691:web:f59b64d25a265b57d242be"
+};
+
+const FIREBASE_CONFIG_KEY = 'firebaseConfig';
+let firebaseReady = false;
+let db = null;
+let auth = null;
+
+function loadFirebaseConfig(){
+  if(EMBEDDED_FIREBASE_CONFIG && EMBEDDED_FIREBASE_CONFIG.apiKey){
+    return EMBEDDED_FIREBASE_CONFIG;
+  }
+  // Fallback: a config pasted via the in-app admin box. Only works on that one device/browser —
+  // fine for quick local testing, but everyone else needs the embedded config above.
+  try{
+    const raw = localStorage.getItem(FIREBASE_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+function initFirebase(){
+  const cfg = loadFirebaseConfig();
+  if(!cfg){
+    document.getElementById('gateDesc').textContent = 'This board hasn\'t been connected to Firebase yet. Click "Household admin?" below to set it up (one-time, ~10 minutes — see the setup guide).';
+    document.getElementById('googleSignInBtn').disabled = true;
+    document.getElementById('googleSignInBtn').style.opacity = '0.5';
+    return;
+  }
+  try{
+    firebase.initializeApp(cfg);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    firebaseReady = true;
+    auth.onAuthStateChanged(onAuthChanged);
+  }catch(e){
+    showGateError('Could not connect to Firebase — check the pasted config and try again.');
+  }
+}
+
+function showGateError(msg){
+  const el = document.getElementById('gateError');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+document.getElementById('gateSettingsToggle').onclick = ()=>{
+  const box = document.getElementById('configBox');
+  box.classList.toggle('open');
+  const existing = loadFirebaseConfig();
+  if(existing) document.getElementById('firebaseConfigInput').value = JSON.stringify(existing, null, 2);
+};
+function parseFirebaseConfigInput(raw){
+  // Accept exactly what Firebase's console shows — the whole snippet is fine,
+  // including "const firebaseConfig = {...};", surrounding import lines, etc.
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if(start === -1 || end === -1 || end < start){
+    throw new Error('No { ... } object found');
+  }
+  let obj = raw.slice(start, end + 1);
+  // Quote bare object keys (apiKey: "...") so it becomes valid JSON ("apiKey": "...")
+  obj = obj.replace(/([{,]\s*)([A-Za-z_$][A-Za-z0-9_$]*)\s*:/g, '$1"$2":');
+  // Remove trailing commas before a closing brace, which JSON doesn't allow
+  obj = obj.replace(/,(\s*})/g, '$1');
+  return JSON.parse(obj);
+}
+
+document.getElementById('saveConfigBtn').onclick = ()=>{
+  const raw = document.getElementById('firebaseConfigInput').value.trim();
+  try{
+    const parsed = parseFirebaseConfigInput(raw);
+    if(!parsed.apiKey || !parsed.projectId){
+      throw new Error('Missing apiKey or projectId');
+    }
+    localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(parsed));
+    location.reload();
+  }catch(e){
+    showGateError('Could not read that config — paste the whole snippet Firebase showed you, starting from "const firebaseConfig = {" through the closing "};".');
+  }
+};
+
+document.getElementById('googleSignInBtn').onclick = ()=>{
+  if(!firebaseReady) return;
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err=>{
+    showGateError('Sign-in failed: ' + err.message);
+  });
+};
+
+document.getElementById('userPill').onclick = ()=>{
+  if(auth && confirm('Sign out?')) auth.signOut();
+};
+
+let unsubscribeSnapshot = null;
+
+function onAuthChanged(user){
+  if(!user){
+    document.getElementById('authGate').style.display = 'flex';
+    document.getElementById('userPill').style.visibility = 'hidden';
+    if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+    return;
+  }
+  currentRole = user.displayName || user.email;
+  document.getElementById('userName').textContent = currentRole.split(' ')[0];
+  document.getElementById('userPhoto').src = user.photoURL || '';
+  document.getElementById('userPill').style.visibility = 'visible';
+  document.getElementById('gateDesc').textContent = 'Loading the board…';
+  document.getElementById('googleSignInBtn').style.display = 'none';
+
+  const docRef = db.collection('household').doc('board');
+  unsubscribeSnapshot = docRef.onSnapshot(snap=>{
+    if(isUserTyping()) return;
+    if(snap.exists){
+      state = snap.data();
+    } else {
+      state = defaultState();
+      docRef.set(state).catch(()=>{});
+    }
+    lastSyncedAt = new Date();
+    updateSyncIndicator(true);
+    document.getElementById('authGate').style.display = 'none';
+    render();
+  }, err=>{
+    updateSyncIndicator(false);
+    if(err.code === 'permission-denied'){
+      auth.signOut();
+      document.getElementById('googleSignInBtn').style.display = 'flex';
+      showGateError('Your account (' + user.email + ') isn\'t authorized for this board yet. Ask whoever set this up to add your email.');
+    }
+  });
+}
+
+initFirebase();
+</script>
+
+<script>
+const ROLE_LABELS = {};
+const DAY_NAMES_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_NAMES_ES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DAY_INITIALS_ES = ['D','L','M','X','J','V','S'];
+const ICS_DAYS = ['SU','MO','TU','WE','TH','FR','SA'];
+
+let lang = 'en';
+let state = null;
+let currentRole = null;
+
+const I18N = {
+  en: {
+    appTitle: 'The Daily Board',
+    addTask: 'Add a task',
+    taskNamePlaceholder: 'What needs doing?',
+    makeStanding: 'Make this a standing duty',
+    addToToday: 'Add to today',
+    recentActivity: 'Recent activity',
+    activityOn: 'Activity on',
+    oneOffDateLabel: 'Date',
+    standingDaysLabel: 'Repeats',
+    allDayLabel: 'All day',
+    everyDayLabel: 'Every day',
+    todayLabel: 'Today',
+    noLogToday: 'Nothing logged yet today.',
+    downloadIcs: '⤓ Download reminders (.ics)',
+    icsNote: "Import once into Susset's iPhone Calendar app for real push alerts at each standing duty's time.<br>Re-download any time after you edit times — it always reflects the current board.",
+    whoCheckingIn: "Who's checking in?",
+    pickWho: 'Pick who you are — this tags anything you add or complete.',
+    gateSignedInPrompt: 'Sign in with your Google account to view and manage the board.',
+    googleSignIn: 'Sign in with Google',
+    gateSettingsLink: 'Advanced: override Firebase config for this device only',
+    groupOverdue: 'Overdue',
+    groupDueNow: 'Due now',
+    groupUpcoming: 'Upcoming',
+    groupAnytime: 'Anytime today',
+    groupPending: 'To do',
+    groupDone: 'Done',
+    emptyOverdue: 'Nothing overdue — good.',
+    emptyGeneric: 'Nothing here right now.',
+    standingBadge: '★ standing',
+    noTimeSet: 'no time set',
+    doneByLabel: 'Done by',
+    atWord: 'at',
+    mealPlaceholder: "Today's meals — e.g. Breakfast: eggs · Lunch: soup · Dinner: chicken",
+    editTime: 'Time',
+    editFrequency: 'Frequency',
+    editDaysCaption: 'Select specific days it repeats, or leave all off for every day',
+    icsSkippedPrefix: "These duties weren't included because they don't have a time set yet:",
+    icsSkippedSuffix: 'Set a time for each on the Board, then download again to include them.',
+    freqDaily: 'Every day',
+    freqWeekly2: 'Twice a week',
+    removeStanding: 'Remove standing duty',
+    confirmRemovePrefix: 'Remove',
+    confirmRemoveSuffix: 'from standing duties?',
+    toastNoConnection: 'Could not save — check connection',
+    toastNeedName: 'Give the task a name first',
+    toastNowStandingSuffix: 'is now a standing duty',
+    toastIcsDownloaded: 'Reminders file downloaded',
+    actDone: 'done',
+    actStanding: 'made standing',
+    actAdded: 'added',
+    byWord: 'by',
+    titleEdit: 'Edit time / frequency',
+    titleMakeStanding: 'Make standing duty',
+    titleRemove: 'Remove',
+    roleDescSusset: 'Domestic Worker',
+    roleDescPrincess: 'Personal Assistant',
+    roleDescSarah: 'Chief of Staff',
+    roleDescLeo: 'Boss'
+  },
+  es: {
+    appTitle: 'El Tablero Diario',
+    addTask: 'Agregar una tarea',
+    taskNamePlaceholder: '¿Qué hay que hacer?',
+    makeStanding: 'Convertir en tarea fija',
+    addToToday: 'Agregar a hoy',
+    recentActivity: 'Actividad reciente',
+    activityOn: 'Actividad el',
+    oneOffDateLabel: 'Fecha',
+    standingDaysLabel: 'Se repite',
+    allDayLabel: 'Todo el día',
+    everyDayLabel: 'Todos los días',
+    todayLabel: 'Hoy',
+    noLogToday: 'Nada registrado todavía hoy.',
+    downloadIcs: '⤓ Descargar recordatorios (.ics)',
+    icsNote: 'Impórtalo una vez en la app Calendario del iPhone de Susset para recibir avisos reales a la hora de cada tarea fija.<br>Descárgalo de nuevo cada vez que cambies los horarios — siempre refleja el tablero actual.',
+    whoCheckingIn: '¿Quién está aquí?',
+    pickWho: 'Elige quién eres — así se marca todo lo que agregues o completes.',
+    gateSignedInPrompt: 'Inicia sesión con tu cuenta de Google para ver y administrar el tablero.',
+    googleSignIn: 'Iniciar sesión con Google',
+    gateSettingsLink: 'Avanzado: anular la configuración de Firebase solo en este dispositivo',
+    groupOverdue: 'Atrasado',
+    groupDueNow: 'Para ahora',
+    groupUpcoming: 'Próximo',
+    groupAnytime: 'En cualquier momento hoy',
+    groupPending: 'Por hacer',
+    groupDone: 'Hecho',
+    emptyOverdue: 'Nada atrasado — muy bien.',
+    emptyGeneric: 'No hay nada aquí por ahora.',
+    standingBadge: '★ fija',
+    noTimeSet: 'sin hora',
+    doneByLabel: 'Hecho por',
+    atWord: 'a las',
+    mealPlaceholder: 'Comidas de hoy — ej. Desayuno: huevos · Almuerzo: sopa · Cena: pollo',
+    editTime: 'Hora',
+    editFrequency: 'Frecuencia',
+    editDaysCaption: 'Elige días específicos en que se repite, o deja todo sin marcar para que sea todos los días',
+    icsSkippedPrefix: 'Estas tareas no se incluyeron porque todavía no tienen una hora asignada:',
+    icsSkippedSuffix: 'Asigna una hora a cada una en el Tablero y vuelve a descargar para incluirlas.',
+    freqDaily: 'Todos los días',
+    freqWeekly2: 'Dos veces por semana',
+    removeStanding: 'Eliminar tarea fija',
+    confirmRemovePrefix: 'Eliminar',
+    confirmRemoveSuffix: 'de las tareas fijas?',
+    toastNoConnection: 'No se pudo guardar — revisa la conexión',
+    toastNeedName: 'Primero ponle un nombre a la tarea',
+    toastNowStandingSuffix: 'ahora es una tarea fija',
+    toastIcsDownloaded: 'Archivo de recordatorios descargado',
+    actDone: 'hecha',
+    actStanding: 'convertida en fija',
+    actAdded: 'agregada',
+    byWord: 'por',
+    titleEdit: 'Editar hora / frecuencia',
+    titleMakeStanding: 'Convertir en tarea fija',
+    titleRemove: 'Quitar',
+    roleDescSusset: 'Trabajadora Doméstica',
+    roleDescPrincess: 'Asistente Personal',
+    roleDescSarah: 'Jefa de Gabinete',
+    roleDescLeo: 'Jefe'
+  }
+};
+
+const DUTY_ES = {
+  'Clean the kitchen': 'Limpiar la cocina',
+  'Clean the rest of the house': 'Limpiar el resto de la casa',
+  'Throw out the trash': 'Sacar la basura',
+  'Do the laundry': 'Lavar la ropa',
+  'Iron all shirts and linens': 'Planchar las camisas y la ropa de cama',
+  'Clean the bathrooms': 'Limpiar los baños',
+  'Get the mail and packages': 'Recoger el correo y los paquetes',
+  "Cook the day's food": 'Cocinar la comida del día',
+  'Take vitamins': 'Tomar las vitaminas',
+  'Creatine + collagen peptides with breakfast': 'Creatina y péptidos de colágeno con el desayuno'
+};
+
+
+function tr(key){ return (I18N[lang] && I18N[lang][key]) || key; }
+function DAYS(){ return lang==='es' ? DAY_NAMES_ES : DAY_NAMES_EN; }
+function taskDisplayName(name){ return lang==='es' ? (DUTY_ES[name] || name) : name; }
+
+function applyStaticText(){
+  document.getElementById('mainTitle').textContent = tr('appTitle');
+  document.getElementById('addToggleText').textContent = tr('addTask');
+  document.getElementById('newTaskName').placeholder = tr('taskNamePlaceholder');
+  document.getElementById('standingLabelText').textContent = tr('makeStanding');
+  document.getElementById('historyTitle').textContent = tr('recentActivity');
+  document.getElementById('icsBtn').textContent = tr('downloadIcs');
+  document.getElementById('icsNote').innerHTML = tr('icsNote');
+  document.getElementById('gateTitle').textContent = tr('appTitle');
+  document.getElementById('oneOffDateLabel').textContent = tr('oneOffDateLabel');
+  document.getElementById('standingDaysLabel').textContent = tr('standingDaysLabel');
+  document.getElementById('allDayBtn').textContent = tr('allDayLabel');
+  document.getElementById('everyDayBtn').textContent = tr('everyDayLabel');
+  document.getElementById('todayJumpBtn').textContent = tr('todayLabel');
+  const saveBtn = document.getElementById('newTaskSave');
+  if(saveBtn) saveBtn.textContent = isViewingToday() ? tr('addToToday') : (tr('addTask') + ' — ' + viewDate.toLocaleDateString(lang==='es'?'es-MX':'en-US', {month:'short', day:'numeric'}));
+  if(loadFirebaseConfig()){
+    document.getElementById('gateDesc').textContent = tr('gateSignedInPrompt');
+  }
+  document.getElementById('googleSignInBtn').lastChild.textContent = ' ' + tr('googleSignIn');
+  document.getElementById('gateSettingsToggle').textContent = tr('gateSettingsLink');
+  document.querySelectorAll('.lang-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.lang===lang);
+  });
+}
+
+function todayKey(){ return new Date().toDateString(); }
+function todayWeekday(){ return new Date().getDay(); }
+
+let viewDate = new Date();
+function viewDateKey(){ return viewDate.toDateString(); }
+function isViewingToday(){ return viewDateKey() === todayKey(); }
+function pad(n){ return n.toString().padStart(2,'0'); }
+function isoDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function dateFromIso(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+function defaultState(){
+  return {
+    standing: [
+      mkStanding('Clean the kitchen', '', 'daily'),
+      mkStanding('Clean the rest of the house', '', 'daily'),
+      mkStanding('Throw out the trash', '', 'daily'),
+      mkStanding('Do the laundry', '', 'daily'),
+      mkStanding('Iron all shirts and linens', '', 'daily'),
+      mkStanding('Clean the bathrooms', '', 'weekly2', []),
+      mkStanding('Get the mail and packages', '', 'daily'),
+      mkStanding("Cook the day's food", '', 'daily', [], true),
+      mkStanding('Take vitamins', '', 'daily'),
+      mkStanding('Creatine + collagen peptides with breakfast', '', 'daily'),
+    ],
+    oneOff: [],
+    completions: {},
+    meals: {},
+    history: []
+  };
+}
+function mkStanding(name, time, freq, days, isMeal){
+  return { id: uid(), name, time: time||'', freq: freq||'daily', days: days||[], isMeal: !!isMeal };
+}
+
+async function saveState(){
+  if(!db){ showToast(tr('toastNoConnection')); return; }
+  try{
+    await db.collection('household').doc('board').set(state);
+  }catch(e){
+    showToast(tr('toastNoConnection'));
+  }
+}
+
+function isUserTyping(){
+  const el = document.activeElement;
+  if(!el) return false;
+  const tag = el.tagName;
+  if(tag==='TEXTAREA') return true;
+  if(tag==='INPUT' && (el.type==='text' || el.type==='time' || el.type==='date')) return true;
+  if(tag==='SELECT') return true;
+  return false;
+}
+
+let lastSyncedAt = null;
+
+function clockTick(){
+  if(isUserTyping()) return;
+  if(state) render();
+}
+
+function updateSyncIndicator(ok){
+  const dot = document.getElementById('syncDot');
+  if(!dot) return;
+  dot.style.background = ok ? 'var(--sage)' : 'var(--coral)';
+  dot.title = ok
+    ? ('Synced ' + (lastSyncedAt ? lastSyncedAt.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : ''))
+    : 'Sync failed — will retry';
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function fmtTime(t){
+  if(!t) return null;
+  const [h,m] = t.split(':').map(Number);
+  const d = new Date(); d.setHours(h,m,0,0);
+  return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+}
+function fmtNow(){
+  return new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+}
+
+function standingInstancesForViewDate(){
+  const wd = viewDate.getDay();
+  return state.standing.filter(s=>{
+    if(!s.days || s.days.length===0) return true; // no specific days picked = every day
+    return s.days.includes(wd);
+  });
+}
+function oneOffForViewDate(){
+  return state.oneOff.filter(t=>t.date===viewDateKey());
+}
+
+function compKey(taskId){ return taskId+'::'+viewDateKey(); }
+function isDone(taskId){ return !!state.completions[compKey(taskId)]; }
+function getComp(taskId){ return state.completions[compKey(taskId)]; }
+
+function statusOf(task){
+  if(isDone(task.id)) return 'done';
+  if(!isViewingToday()) return 'pending'; // past/future days: no urgency coloring, just done/not-done
+  if(!task.time) return 'anytime';
+  const [h,m] = task.time.split(':').map(Number);
+  const due = new Date(); due.setHours(h,m,0,0);
+  const now = new Date();
+  const diffMin = (now-due)/60000;
+  if(diffMin < 0) return 'upcoming';
+  if(diffMin <= 60) return 'duenow';
+  return 'overdue';
+}
+
+function render(){
+  applyStaticText();
+  const locale = lang==='es' ? 'es-MX' : 'en-US';
+  const todayLabel = isViewingToday() ? (' · ' + fmtNow()) : '';
+  document.getElementById('dateLine').textContent = viewDate.toLocaleDateString(locale, {weekday:'long', month:'long', day:'numeric'}) + todayLabel;
+  document.getElementById('todayJumpBtn').style.display = isViewingToday() ? 'none' : 'inline-flex';
+
+  // day strip (week view) — highlights whichever day is currently being viewed
+  const wd = viewDate.getDay();
+  const stripEl = document.getElementById('dayStrip');
+  const labelsEl = document.getElementById('dayLabels');
+  stripEl.innerHTML=''; labelsEl.innerHTML='';
+  // Sunday of the week containing viewDate, so the strip can jump to any day in that week
+  const weekStart = new Date(viewDate);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  DAYS().forEach((n,i)=>{
+    const seg = document.createElement('div');
+    seg.className = 'day-seg'+(i===wd?' active':'');
+    seg.style.cursor = 'pointer';
+    seg.onclick = ()=>{
+      const target = new Date(weekStart);
+      target.setDate(target.getDate()+i);
+      viewDate = target;
+      render();
+    };
+    stripEl.appendChild(seg);
+    const lab = document.createElement('span');
+    lab.textContent = n;
+    lab.style.cursor = 'pointer';
+    if(i===wd) lab.style.color = 'var(--ink)';
+    lab.onclick = seg.onclick;
+    labelsEl.appendChild(lab);
+  });
+
+  const all = [...standingInstancesForViewDate().map(t=>({...t, kind:'standing'})), ...oneOffForViewDate().map(t=>({...t, kind:'oneoff'}))];
+
+  const groupDefs = isViewingToday() ? [
+    {key:'overdue', labelKey:'groupOverdue', color:'var(--coral)'},
+    {key:'duenow', labelKey:'groupDueNow', color:'var(--marigold)'},
+    {key:'upcoming', labelKey:'groupUpcoming', color:'var(--sky)'},
+    {key:'anytime', labelKey:'groupAnytime', color:'var(--ink-soft)'},
+    {key:'done', labelKey:'groupDone', color:'var(--sage)'},
+  ] : [
+    {key:'pending', labelKey:'groupPending', color:'var(--sky)'},
+    {key:'done', labelKey:'groupDone', color:'var(--sage)'},
+  ];
+
+  const buckets = {};
+  groupDefs.forEach(g=>{ buckets[g.key] = []; });
+  all.forEach(t=>{ const s = statusOf(t); if(buckets[s]) buckets[s].push(t); });
+
+  const groupsEl = document.getElementById('groups');
+  groupsEl.innerHTML = '';
+  groupDefs.forEach(g=>{
+    const items = buckets[g.key];
+    const section = document.createElement('section');
+    section.className = 'group';
+    section.innerHTML = `<div class="group-head"><span class="swatch" style="background:${g.color}"></span><h2>${tr(g.labelKey)}</h2><span class="count">${items.length}</span></div>`;
+    const body = document.createElement('div');
+    if(items.length===0){
+      const p = document.createElement('div');
+      p.className='empty-note';
+      p.textContent = g.key==='overdue' ? tr('emptyOverdue') : tr('emptyGeneric');
+      body.appendChild(p);
+    } else {
+      items.sort((a,b)=> (a.time||'99:99').localeCompare(b.time||'99:99'));
+      items.forEach(t=> body.appendChild(taskCard(t, g.key)));
+    }
+    section.appendChild(body);
+    groupsEl.appendChild(section);
+  });
+
+  renderHistory();
+}
+
+function taskCard(t, statusKey){
+  const el = document.createElement('div');
+  el.className = 'task' + (statusKey==='done'?' done':'') + (statusKey==='overdue'?' overdue':'');
+
+  const check = document.createElement('div');
+  check.className='check';
+  check.innerHTML = '<svg viewBox="0 0 20 20"><path d="M4 10l4 4 8-8"/></svg>';
+  check.onclick = ()=> toggleComplete(t);
+  el.appendChild(check);
+
+  const body = document.createElement('div');
+  body.className='task-body';
+
+  const top = document.createElement('div');
+  top.className='task-top';
+  const name = document.createElement('div');
+  name.className='task-name';
+  name.textContent = taskDisplayName(t.name);
+  top.appendChild(name);
+
+  const badgeWrap = document.createElement('div');
+  badgeWrap.style.display='flex'; badgeWrap.style.gap='6px'; badgeWrap.style.flex='none';
+  if(t.kind==='standing'){
+    const b = document.createElement('span'); b.className='badge standing'; b.textContent=tr('standingBadge');
+    badgeWrap.appendChild(b);
+  }
+  if(t.time){
+    const b = document.createElement('span'); b.className='badge time'; b.textContent=fmtTime(t.time);
+    badgeWrap.appendChild(b);
+  } else if(t.kind==='standing'){
+    const b = document.createElement('span'); b.className='badge time'; b.textContent=tr('noTimeSet');
+    badgeWrap.appendChild(b);
+  }
+  top.appendChild(badgeWrap);
+  body.appendChild(top);
+
+  if(statusKey==='done'){
+    const comp = getComp(t.id);
+    const meta = document.createElement('div');
+    meta.className='meta-line';
+    meta.textContent = `${tr('doneByLabel')} ${ROLE_LABELS[comp.by]||comp.by} ${tr('atWord')} ${comp.at}`;
+    body.appendChild(meta);
+  }
+
+  if(t.isMeal){
+    const input = document.createElement('textarea');
+    input.className='meal-input';
+    input.placeholder = tr('mealPlaceholder');
+    input.value = state.meals[viewDateKey()] || '';
+    input.onchange = async ()=>{
+      state.meals[viewDateKey()] = input.value;
+      await saveState();
+    };
+    body.appendChild(input);
+  }
+
+  if(t.kind==='standing'){
+    body.appendChild(editPanel(t));
+  }
+
+  el.appendChild(body);
+
+  const actions = document.createElement('div');
+  actions.className='task-actions';
+  if(t.kind==='oneoff'){
+    if(!isDone(t.id)){
+      const starBtn = document.createElement('button');
+      starBtn.className='icon-btn'; starBtn.title=tr('titleMakeStanding'); starBtn.textContent='★';
+      starBtn.onclick = ()=> promoteToStanding(t);
+      actions.appendChild(starBtn);
+    }
+    const delBtn = document.createElement('button');
+    delBtn.className='icon-btn'; delBtn.title=tr('titleRemove'); delBtn.textContent='✕';
+    delBtn.onclick = ()=> deleteOneOff(t.id);
+    actions.appendChild(delBtn);
+  } else {
+    const editBtn = document.createElement('button');
+    editBtn.className='icon-btn'; editBtn.title=tr('titleEdit'); editBtn.textContent='✎';
+    editBtn.onclick = ()=>{
+      const panel = el.querySelector('.edit-panel');
+      panel.style.display = panel.style.display==='none' ? 'flex' : 'none';
+    };
+    actions.appendChild(editBtn);
+  }
+  el.appendChild(actions);
+
+  return el;
+}
+
+function editPanel(t){
+  const panel = document.createElement('div');
+  panel.className='edit-panel';
+  panel.style.display='none';
+
+  const timeLabel = document.createElement('label');
+  timeLabel.innerHTML = tr('editTime');
+  const timeRow = document.createElement('div');
+  timeRow.style.display='flex'; timeRow.style.gap='6px'; timeRow.style.alignItems='center';
+  const timeInput = document.createElement('input');
+  timeInput.type='time'; timeInput.value = t.time||'';
+  timeInput.onchange = async ()=>{
+    const s = state.standing.find(x=>x.id===t.id);
+    s.time = timeInput.value;
+    await saveState(); render();
+  };
+  const editAllDayBtn = document.createElement('button');
+  editAllDayBtn.type='button'; editAllDayBtn.className='chip-btn'+(t.time?'':' active');
+  editAllDayBtn.textContent = tr('allDayLabel');
+  editAllDayBtn.onclick = async ()=>{
+    const s = state.standing.find(x=>x.id===t.id);
+    s.time = '';
+    await saveState(); render();
+  };
+  timeRow.appendChild(timeInput);
+  timeRow.appendChild(editAllDayBtn);
+  timeLabel.appendChild(timeRow);
+  panel.appendChild(timeLabel);
+
+  const dayWrap = document.createElement('div');
+  dayWrap.style.display='flex'; dayWrap.style.flexDirection='column'; dayWrap.style.gap='4px';
+  const dayCaption = document.createElement('label');
+  dayCaption.textContent = tr('editDaysCaption');
+  dayCaption.style.fontSize='12px'; dayCaption.style.color='var(--ink-soft)';
+  dayWrap.appendChild(dayCaption);
+
+  const dayRow = document.createElement('div');
+  dayRow.className='days-row';
+  const editEveryDayBtn = document.createElement('button');
+  editEveryDayBtn.type='button'; editEveryDayBtn.className='chip-btn'+(t.days&&t.days.length>0?'':' active');
+  editEveryDayBtn.textContent = tr('everyDayLabel');
+  editEveryDayBtn.onclick = async ()=>{
+    const s = state.standing.find(x=>x.id===t.id);
+    s.days = [];
+    s.freq = 'daily';
+    await saveState(); render();
+  };
+  dayRow.appendChild(editEveryDayBtn);
+
+  const dayPicker = document.createElement('div');
+  dayPicker.className='weekday-picker';
+  function renderDayPicker(){
+    dayPicker.innerHTML='';
+    const s = state.standing.find(x=>x.id===t.id);
+    const initials = lang==='es' ? DAY_INITIALS_ES : DAY_NAMES_EN.map(n=>n[0]);
+    initials.forEach((letter,i)=>{
+      const b = document.createElement('button');
+      b.type='button'; b.textContent=letter;
+      if(s.days.includes(i)) b.classList.add('on');
+      b.onclick = async ()=>{
+        const idx = s.days.indexOf(i);
+        if(idx>-1) s.days.splice(idx,1); else s.days.push(i);
+        s.freq = s.days.length>0 ? 'weekly2' : 'daily'; // keep freq in sync automatically — the day picker is the source of truth
+        await saveState(); render();
+      };
+      dayPicker.appendChild(b);
+    });
+  }
+  renderDayPicker();
+  dayRow.appendChild(dayPicker);
+  dayWrap.appendChild(dayRow);
+  panel.appendChild(dayWrap);
+
+  const delBtn = document.createElement('button');
+  delBtn.className='small-btn ghost'; delBtn.textContent=tr('removeStanding');
+  delBtn.onclick = async ()=>{
+    if(!confirm(tr('confirmRemovePrefix')+' "'+taskDisplayName(t.name)+'" '+tr('confirmRemoveSuffix'))) return;
+    state.standing = state.standing.filter(x=>x.id!==t.id);
+    await saveState(); render();
+  };
+  panel.appendChild(delBtn);
+
+  return panel;
+}
+
+async function toggleComplete(t){
+  const key = compKey(t.id);
+  if(state.completions[key]){
+    delete state.completions[key];
+  } else {
+    state.completions[key] = { by: currentRole, at: fmtNow() };
+    state.history.unshift({ date: viewDateKey(), time: fmtNow(), name: t.name, action:'done', by: currentRole });
+    state.history = state.history.slice(0,60);
+  }
+  await saveState();
+  render();
+}
+
+async function deleteOneOff(id){
+  state.oneOff = state.oneOff.filter(t=>t.id!==id);
+  delete state.completions[compKey(id)];
+  await saveState(); render();
+}
+
+async function promoteToStanding(t){
+  const s = mkStanding(t.name, t.time, 'daily');
+  state.standing.push(s);
+  const wasDone = isDone(t.id);
+  state.oneOff = state.oneOff.filter(x=>x.id!==t.id);
+  delete state.completions[compKey(t.id)];
+  if(wasDone) state.completions[compKey(s.id)] = { by: currentRole, at: fmtNow() };
+  state.history.unshift({ date: viewDateKey(), time: fmtNow(), name: t.name, action:'made standing', by: currentRole });
+  await saveState();
+  showToast('"'+taskDisplayName(t.name)+'" '+tr('toastNowStandingSuffix'));
+  render();
+}
+
+const ACTION_KEY = { 'done':'actDone', 'made standing':'actStanding', 'added':'actAdded' };
+
+function renderHistory(){
+  const el = document.getElementById('logList');
+  el.innerHTML='';
+  document.getElementById('historyTitle').textContent = isViewingToday()
+    ? tr('recentActivity')
+    : tr('activityOn') + ' ' + viewDate.toLocaleDateString(lang==='es'?'es-MX':'en-US', {month:'long', day:'numeric'});
+  const todays = state.history.filter(h=>h.date===viewDateKey());
+  if(todays.length===0){
+    el.innerHTML = `<div class="empty-note">${tr('noLogToday')}</div>`;
+    return;
+  }
+  todays.slice(0,20).forEach(h=>{
+    const row = document.createElement('div');
+    row.className='log-row';
+    const actionText = tr(ACTION_KEY[h.action] || h.action);
+    row.innerHTML = `<span class="t">${h.time}</span><span>${h.action==='done' ? '✓' : '★'} <b>${taskDisplayName(h.name)}</b> — ${actionText} ${tr('byWord')} ${ROLE_LABELS[h.by]||h.by}</span>`;
+    el.appendChild(row);
+  });
+}
+
+// Date navigation
+document.getElementById('prevDayBtn').onclick = ()=>{
+  const d = new Date(viewDate); d.setDate(d.getDate()-1); viewDate = d; render();
+};
+document.getElementById('nextDayBtn').onclick = ()=>{
+  const d = new Date(viewDate); d.setDate(d.getDate()+1); viewDate = d; render();
+};
+document.getElementById('todayJumpBtn').onclick = ()=>{
+  viewDate = new Date(); render();
+};
+
+// Add task form — day picker + all-day + standing/one-off toggle
+let newTaskDays = [];
+
+function buildNewTaskDayPicker(){
+  const picker = document.getElementById('newTaskDayPicker');
+  picker.innerHTML = '';
+  const initials = lang==='es' ? DAY_INITIALS_ES : DAY_NAMES_EN.map(n=>n[0]);
+  initials.forEach((letter,i)=>{
+    const b = document.createElement('button');
+    b.type='button'; b.textContent=letter;
+    if(newTaskDays.includes(i)) b.classList.add('on');
+    b.onclick = ()=>{
+      const idx = newTaskDays.indexOf(i);
+      if(idx>-1) newTaskDays.splice(idx,1); else newTaskDays.push(i);
+      buildNewTaskDayPicker();
+      document.getElementById('everyDayBtn').classList.toggle('active', newTaskDays.length===0);
+    };
+    picker.appendChild(b);
+  });
+}
+document.getElementById('everyDayBtn').onclick = ()=>{
+  newTaskDays = [];
+  buildNewTaskDayPicker();
+  document.getElementById('everyDayBtn').classList.add('active');
+};
+
+document.getElementById('newTaskStanding').onchange = (e)=>{
+  const standing = e.target.checked;
+  document.getElementById('oneOffDateWrap').style.display = standing ? 'none' : 'block';
+  document.getElementById('standingDaysWrap').style.display = standing ? 'block' : 'none';
+};
+
+const allDayBtn = document.getElementById('allDayBtn');
+const newTaskTimeInput = document.getElementById('newTaskTime');
+allDayBtn.onclick = ()=>{
+  newTaskTimeInput.value = '';
+  allDayBtn.classList.add('active');
+};
+newTaskTimeInput.addEventListener('input', ()=>{
+  if(newTaskTimeInput.value) allDayBtn.classList.remove('active');
+});
+
+// Add task form
+document.getElementById('addToggle').onclick = ()=>{
+  document.getElementById('addForm').classList.toggle('open');
+  document.getElementById('newTaskDate').value = isoDate(viewDate);
+};
+document.getElementById('newTaskSave').onclick = async ()=>{
+  const name = document.getElementById('newTaskName').value.trim();
+  if(!name){ showToast(tr('toastNeedName')); return; }
+  const time = document.getElementById('newTaskTime').value;
+  const makeStanding = document.getElementById('newTaskStanding').checked;
+  if(makeStanding){
+    const s = mkStanding(name, time, newTaskDays.length>0 ? 'weekly2' : 'daily', [...newTaskDays]);
+    state.standing.push(s);
+    state.history.unshift({ date: viewDateKey(), time: fmtNow(), name, action:'made standing', by: currentRole });
+  } else {
+    const dateVal = document.getElementById('newTaskDate').value;
+    const dateObj = dateVal ? dateFromIso(dateVal) : new Date(viewDate);
+    const dateKey = dateObj.toDateString();
+    state.oneOff.push({ id: uid(), name, time, date: dateKey, createdBy: currentRole });
+    state.history.unshift({ date: dateKey, time: fmtNow(), name, action:'added', by: currentRole });
+  }
+  await saveState();
+  document.getElementById('newTaskName').value='';
+  document.getElementById('newTaskTime').value='';
+  document.getElementById('newTaskStanding').checked=false;
+  document.getElementById('oneOffDateWrap').style.display='block';
+  document.getElementById('standingDaysWrap').style.display='none';
+  document.getElementById('newTaskDate').value = isoDate(viewDate);
+  allDayBtn.classList.remove('active');
+  newTaskDays = [];
+  buildNewTaskDayPicker();
+  document.getElementById('everyDayBtn').classList.add('active');
+  document.getElementById('addForm').classList.remove('open');
+  render();
+};
+
+// Language toggle
+document.querySelectorAll('.lang-btn').forEach(b=>{
+  b.onclick = ()=>{
+    lang = b.dataset.lang;
+    buildNewTaskDayPicker();
+    render();
+  };
+});
+
+// ICS export
+document.getElementById('icsBtn').onclick = ()=>{
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//The Daily Board//EN',
+    'CALSCALE:GREGORIAN'
+  ];
+  const skipped = [];
+  const now = new Date();
+  state.standing.forEach(s=>{
+    if(!s.time){ skipped.push(taskDisplayName(s.name)); return; }
+    const hasDays = s.days && s.days.length>0;
+    const [h,m] = s.time.split(':').map(Number);
+    let dt = new Date();
+    dt.setHours(h,m,0,0);
+    if(!hasDays){
+      if(dt < now) dt.setDate(dt.getDate()+1);
+    } else {
+      // find next matching weekday
+      let found=false;
+      for(let i=0;i<8;i++){
+        const cand = new Date();
+        cand.setDate(cand.getDate()+i);
+        cand.setHours(h,m,0,0);
+        if(s.days.includes(cand.getDay()) && cand>=now){ dt=cand; found=true; break; }
+      }
+      if(!found) return; // shouldn't happen — every weekday is checked within 8 days
+    }
+    const dtStr = dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'T'+pad(dt.getHours())+pad(dt.getMinutes())+'00';
+    let rrule = 'RRULE:FREQ=DAILY';
+    if(hasDays){
+      rrule = 'RRULE:FREQ=WEEKLY;BYDAY='+s.days.map(d=>ICS_DAYS[d]).join(',');
+    }
+    lines.push(
+      'BEGIN:VEVENT',
+      'UID:'+s.id+'@thedailyboard',
+      'DTSTAMP:'+dtStr+'Z',
+      'DTSTART:'+dtStr,
+      'DURATION:PT30M',
+      rrule,
+      'SUMMARY:'+escapeIcs(taskDisplayName(s.name)),
+      'BEGIN:VALARM',
+      'TRIGGER:-PT15M',
+      'ACTION:DISPLAY',
+      'DESCRIPTION:'+escapeIcs(taskDisplayName(s.name)),
+      'END:VALARM',
+      'END:VEVENT'
+    );
+  });
+  lines.push('END:VCALENDAR');
+  const blob = new Blob([lines.join(String.fromCharCode(13,10))], {type:'text/calendar'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'household-duties.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast(tr('toastIcsDownloaded'));
+  if(skipped.length){
+    alert(tr('icsSkippedPrefix') + '\n\n' + skipped.map(n=>'• '+n).join('\n') + '\n\n' + tr('icsSkippedSuffix'));
+  }
+};
+function escapeIcs(s){ return s.split(',').join(String.fromCharCode(92)+',').split(';').join(String.fromCharCode(92)+';'); }
+
+// init
+(function init(){
+  applyStaticText();
+  buildNewTaskDayPicker();
+  document.getElementById('newTaskDate').value = isoDate(viewDate);
+  setInterval(clockTick, 30000);
+})();
+</script>
+</body>
+</html>
